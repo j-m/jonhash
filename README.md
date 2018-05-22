@@ -6,7 +6,7 @@ If you spot something that makes it insecure, flag it as an Issue.
 
 Currently converting it to C. Please use the releases tab for the working C++ version.
 This does not use a cryptographically secure pseudo random number genertor (CSPRNG) yet, and will have biased output.
-Cost, resultant size, Base64 characters, and the initial hash can be easily redefined.
+Cost, resultant size, characters used for base 64, and the initial hash can be easily redefined.
 
 ## How does it work?
 
@@ -16,7 +16,7 @@ Firstly it generates a random string of `BLOCK_SIZE` (32 by default) characters 
 `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`
 
 Then the salt and hash are weaved. 
-Say the salt was `ABCDEFGHIJKLMNOPQRSTUVWXYZ012345` and the password was `this is my password`, the weaved result would be: `AtBhCiDsE FmGyH IpJaKsLsMwNoOrPdQRSTUVWXYZ012345`. If the password is longer than `BLOCK_SIZE` then the remainder is appended.
+Say the salt was `ABCDEFGHIJKLMNOPQRSTUVWXYZ012345` and the password was `this my password`, the weaved result would be: `AtBhCiDsE FmGyH IpJaKsLsMwNoOrPdQRSTUVWXYZ012345`. If the password is longer than `BLOCK_SIZE` then the remainder is appended.
 
 After this, the weave is then padded to a multiple of `BLOCK_SIZE`. The first character (`1`) of the pad is different to the rest (`0`) because if the password were longer than `BLOCK_SIZE` and ended with the same character as the pad, then multiple passwords could have the same hash input (though incredibly unlikely). An additional `BLOCK_SIZE` of `0`'s is appended to the alignment to protect from malicous input. In our case the hash input would be: `AtBhCiDsE FmGyH IpJaKsLsMwNoOrPdQRSTUVWXYZ012345100000000000000000000000000000000000000000000000`.
 
@@ -26,3 +26,13 @@ Finally, the last step is repeated `COST` times (`H0` is **not** reset) to make 
 The result is `salt` + `hash`, giving you a `BLOCK_SIZE` * 2 sized string.
 
 <sub><sup>An animation will be made to clarify this, and show an example of the last stages</sup></sub>
+
+## To-Do
+
+- [ ] Convert to C from C++ for efficiency
+- [ ] Use via program arguments
+- [ ] Use as an include
+- [ ] Transfer to CSPRNG from PRNG
+- [ ] Allow non-`BASE64` characters for input
+- [ ] Evaluate biases
+- [ ] Animate the process

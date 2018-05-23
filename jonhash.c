@@ -1,48 +1,40 @@
-#include <stdlib.h>
-
-#define COST 10000
-#define CHARACTERS "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-#define BLOCK_SIZE 32
+#ifndef CHAR_BIT
+#define CHAR_BIT 8 //The number of bits in a char type variable
+#endif
+#define COST 10 //The number of loops, multiplied by 1000
+#define BASE64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" //Characters used to reprent numbers in base 64
+#define BLOCK_SIZE 32 //The size of the salt and hash; result is always double this 
 #define H0 "jonathanmarsh123jonathanmarsh123" //The initial hash used for the first XOR (BLOCK_SIZE characters)
 
 /*Comapres 2 strings of binary and XORs them*/
 char* XOR(char* string1, char* string2) {
-	char* XORed;
-	size_t index = 0;
-	for (; string1[index] != '\0'; index++)
+	char XORed[BLOCK_SIZE * CHAR_BIT];
+	for (unsigned int index = 0; index < BLOCK_SIZE * CHAR_BIT; index++)
 		XORed[index] = (string1[index] != string2[index]) ? '1' : '0';
-	XORed[index] = '\0';
 	return XORed;
 }
 
-/*Left shifts string once*/
-void shift(char* input) {
-	char temp = input[0];
-	size_t index = 1;
-	for (; input[index] != '\0'; index++)
-		input[index - 1] = input[index];
-	input[index] = temp;
-}
-
-/*Converts decimal to 6 bit binary*/
-char* getBinary(size_t decimal) {
-	char binary[CHAR_BIT] = "000000";
-	while (decimal > 0) {
-		binary = ((decimal % 2==1)?'1':'0') + binary;
-		decimal /= 2;
-	}
-	binary = std::string(BITS - binary.size(), '0').append(binary);
-	return binary;
+/*Left shifts binary string `shift` times*/
+char* shiftBy(char* input, unsigned int shift) {
+	char shifted[BLOCK_SIZE * CHAR_BIT];
+	for (unsigned int index = 0; index < BLOCK_SIZE * CHAR_BIT; index++)
+		if(index < shift)
+			shifted[BLOCK_SIZE * CHAR_BIT - shift + index] = input[index];
+		else
+			shifted[index - shift] = input[index];
+	return shifted;
 }
 
 /*Converts base64 string to binary*/
-std::string convertToBinary(std::string raw64) {
-	std::string value = "";
-	for (char character: raw64)
-		for (size_t decimal = 0; decimal < pow(2.0, BITS); decimal++)
-			if (character == CHARACTERS[decimal])
-				value += getBinary(decimal);
-	return value;
+char* convertToBinary(char* input) {
+	char* binary;
+	unsigned int index = 0;
+	for (; index < BLOCK_SIZE; index++){
+		int mask = 0x10 << 1;
+		while(mask >>= 1)
+			*binary++ = !!(mask & (int)input[index]) + '0';
+	}
+	return binary;
 }
 
 /*Converts binary to decimal*/
@@ -60,7 +52,7 @@ size_t getDecimal(size_t binary) {
 std::string convertFromBinary(std::string binary) {
 	std::string value = "";
 	for (size_t index = 0; index < binary.size() / BITS; index++)
-		value+= CHARACTERS[getDecimal(std::stoul(binary.substr(index * BITS, BITS)))];
+		value+= BASE64[getDecimal(std::stoul(binary.substr(index * BITS, BITS)))];
 	return value;
 }
 
@@ -108,7 +100,7 @@ void weave(std::string &password, std::string salt) {
 std::string createSalt() {
 	std::string salt = "";
 	for (size_t i = 0; i < BLOCK_SIZE; i++)
-		salt.push_back(CHARACTERS[randomCharacter(random)]);
+		salt.push_back(BASE64[randomCharacter(random)]);
 	return salt;
 }
 
@@ -117,7 +109,7 @@ std::string hashPassword(std::string password, std::string salt = createSalt()) 
 	weave(password, salt);
 	padAlign(password);
 	std::string hashed = H0;
-	for (size_t iterate = 0; iterate < COST; iterate++)
+	for (size_t iterate = 0; iterate < COST * 1000; iterate++)
 		for (size_t i = 0; i < password.size() / BLOCK_SIZE; i++) {
 			std::string result = hash(password.substr(i * BLOCK_SIZE, BLOCK_SIZE), hashed);
 			hashed = result;

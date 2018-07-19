@@ -2,81 +2,94 @@
 #define CHAR_BIT 8 //The number of bits in a char type variable
 #endif
 #define COST 10 //The number of loops, multiplied by 1000
-#define BASE64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" //Characters used to reprent numbers in base 64
+#define BASE64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" //Characters used to represent numbers in base 64
 #define BLOCK_SIZE 32 //The size of the salt and hash; result is always double this 
 #define H0 "jonathanmarsh123jonathanmarsh123" //The initial hash used for the first XOR (BLOCK_SIZE characters)
 
-/*Comapres 2 strings of binary and XORs them*/
-char* XOR(char* string1, char* string2) {
-	char XORed[BLOCK_SIZE * CHAR_BIT];
+#include <stdio.h> //TODO: remove
+
+/*Compares 2 strings of binary and XORs them.
+	output:	char* binary[BLOCK_SIZE * CHAR_BIT];
+	input1:	char* binary[BLOCK_SIZE * CHAR_BIT];
+	input2:	char* binary[BLOCK_SIZE * CHAR_BIT];
+*/
+void XOR(char* output, char* input1, char* input2) {
 	for (unsigned int index = 0; index < BLOCK_SIZE * CHAR_BIT; index++)
-		XORed[index] = (string1[index] != string2[index]) ? '1' : '0';
-	return XORed;
+		output[index] = (input1[index] != input2[index]) ? '1' : '0';
 }
 
-/*Left shifts binary string `shift` times*/
-char* shiftBy(char* input, unsigned int shift) {
-	char shifted[BLOCK_SIZE * CHAR_BIT];
+/*Left-shifts binary string `shift` times
+	output:	char* binary[BLOCK_SIZE * CHAR_BIT];
+	input:	char* binary[BLOCK_SIZE * CHAR_BIT];
+	shift:	unsigned int;
+*/
+void shift(char* output, char* input, unsigned int shift) {
 	for (unsigned int index = 0; index < BLOCK_SIZE * CHAR_BIT; index++)
 		if(index < shift)
-			shifted[BLOCK_SIZE * CHAR_BIT - shift + index] = input[index];
+			output[BLOCK_SIZE * CHAR_BIT - shift + index] = input[index];
 		else
-			shifted[index - shift] = input[index];
-	return shifted;
+			output[index - shift] = input[index];
 }
 
-/*Converts base64 string to binary*/
-char* convertToBinary(char* input) {
-	char* binary;
-	unsigned int index = 0;
-	for (; index < BLOCK_SIZE; index++){
-		int mask = 0x10 << 1;
-		while(mask >>= 1)
-			*binary++ = !!(mask & (int)input[index]) + '0';
+/*Converts a base64 string to concatenated binary string
+	output:	char* binary[BLOCK_SIZE * CHAR_BIT];
+	input: 	char* binary[BLOCK_SIZE];
+*/
+void convertBase64ToBinary(char* output, char* input) {
+	for (unsigned int index = 0; index < BLOCK_SIZE; index++){
+		unsigned int quotient = (unsigned int)input[index],
+			base = CHAR_BIT;
+		while(quotient != 0 || base > 0){
+			output[index * CHAR_BIT + base] = (quotient != quotient / 2 * 2) ? '1' : '0';
+			quotient /= 2;
+			base--;
+		}
 	}
-	return binary;
 }
 
-/*Converts binary to decimal*/
-size_t getDecimal(size_t binary) {
-	size_t decimal = 0, base = 1;
-	while (binary > 0){
-		decimal += binary % 10 * base;
+/*Converts concatenated binary string to a base64 string
+	output:	char* binary[BLOCK_SIZE];
+	input: 	char* binary[BLOCK_SIZE * CHAR_BIT];
+*/
+void convertBinaryToBase64(char* output, char* input) {
+	unsigned int base = 2, total = 0, increment = 0;
+	for (unsigned int index = BLOCK_SIZE * CHAR_BIT - 1; index >= 0; index--){
+		total += input[index] * base;
 		base *= 2;
-		binary /= 10;
+		increment++;
+		if(increment == CHAR_BIT){
+			base = 2;
+			output[index / CHAR_BIT] = total; 
+			total = 0;
+			increment = 0;
+		}
 	}
-	return decimal;
-}
-
-/*Converts string of 6 bit binaries to a base64 string*/
-std::string convertFromBinary(std::string binary) {
-	std::string value = "";
-	for (size_t index = 0; index < binary.size() / BITS; index++)
-		value+= BASE64[getDecimal(std::stoul(binary.substr(index * BITS, BITS)))];
-	return value;
 }
 
 /*Hashes the current block
-	Uses previous hash to make it one way
-	Encrypts by shifting 
-	XORs the encrypted binary with the previous binary
+	-Uses previous hash to make it one way
+	-Encrypts by shifting 
+	-XORs the encrypted binary with the previous binary
 */
-std::string hash(std::string currentBlock, std::string previousHash) {
-	std::string currentBinary = convertToBinary(currentBlock),
-				previousBinary = convertToBinary(previousHash);
+char* hash(char* currentBlock, char* previousHash) {
+	char* currentBinary = convertToBinary(currentBlock),
+		  previousBinary = convertToBinary(previousHash);
 
+	char shifted[BLOCK_SIZE * CHAR_BIT];
 	size_t shiftBy = 1;
 	for (char character : previousBinary)
 		if (character == '1')
 			shiftBy++;
 	for (size_t i = 0; i < 1; i++) 
-		shift(currentBinary);
+		shift(shifted, currentBinary, shiftBy);
 
-	return convertFromBinary(XOR(currentBinary, previousBinary));
+	char XORed[BLOCK_SIZE * CHAR_BIT];
+	XOR(XORed, currentBinary, previousBinary)
+	return convertFromBinary(XORed);
 }
 
-/*Appends a character then appends a different character to make the length a multiple of BLOCK_SIZE*/
-void padAlign(std::string &input) {
+/*Appends a 1 then appends 0s to make it a BLOCK_SIZE multiple*/
+void padAlign(char* input) {
 	input += '1';
 	size_t padBy = 2 * BLOCK_SIZE - input.size() % BLOCK_SIZE;
 	for (size_t i = 0; i < padBy; i++) 
@@ -84,8 +97,8 @@ void padAlign(std::string &input) {
 }
 
 /*Alternates between the password and salt (weaves)*/
-void weave(std::string &password, std::string salt) {
-	std::string woven = "";
+void weave(char* password, char* salt) {
+	char* woven;
 	for (size_t i = 0; i < password.size(); i++) {
 		woven += password[i];
 		if (i < salt.size()) 
@@ -97,7 +110,7 @@ void weave(std::string &password, std::string salt) {
 }
 
 /*Creates a random salt using the new random function*/
-std::string createSalt() {
+char* createSalt() {
 	std::string salt = "";
 	for (size_t i = 0; i < BLOCK_SIZE; i++)
 		salt.push_back(BASE64[randomCharacter(random)]);
@@ -105,31 +118,25 @@ std::string createSalt() {
 }
 
 /*Creates the final hash by compressing the output of each stage*/
-std::string hashPassword(std::string password, std::string salt = createSalt()) {
+char* hashPassword(char* password, char* salt = createSalt()) {
 	weave(password, salt);
 	padAlign(password);
-	std::string hashed = H0;
+	char* hashed = H0;
 	for (size_t iterate = 0; iterate < COST * 1000; iterate++)
 		for (size_t i = 0; i < password.size() / BLOCK_SIZE; i++) {
-			std::string result = hash(password.substr(i * BLOCK_SIZE, BLOCK_SIZE), hashed);
+			char* result = hash(password.substr(i * BLOCK_SIZE, BLOCK_SIZE), hashed);
 			hashed = result;
 		}
 	return salt + hashed;
 }
 
-/*Gets input from the user*/
-std::string getPassword() {
-	std::cout << "Password: ";
-	std::string password;
-	std::getline(std::cin, password);
-	return password;
-}
 
 int main(int argc, char* argv[]){
+	printf("%d",argc);
 	if(argc == 1)  hashPassword(getPassword());
 
-	std::string savedHash = hashPassword(getPassword());
-	std::string hashed = hashPassword(getPassword(), savedHash.substr(0, BLOCK_SIZE));
+	char* savedHash = hashPassword(getPassword());
+	char* hashed = hashPassword(getPassword(), savedHash.substr(0, BLOCK_SIZE));
 	if (hashed == savedHash) return 0;
 	else return 1;
 }

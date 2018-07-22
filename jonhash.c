@@ -2,7 +2,7 @@
 #define CHAR_BIT 8 //The number of bits in a char type variable
 #endif
 #define COST 10 //The number of loops, multiplied by 1000
-#define BASE64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" //Characters used to represent numbers in base 64
+#define BASE64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-" //Characters used to represent numbers in base 64
 #define BLOCK_SIZE 32 //The size of the salt and hash; result is always double this 
 #define H0 "jonathanmarsh123jonathanmarsh123" //The initial hash used for the first XOR (BLOCK_SIZE characters)
 
@@ -15,7 +15,7 @@
 */
 void XOR(char* output, char* input1, char* input2) {
 	for (unsigned int index = 0; index < BLOCK_SIZE * CHAR_BIT; index++)
-		output[index] = (input1[index] != input2[index]) ? 1 : 0;
+		output[index] = (input1[index] != input2[index]) ? '1' : '0';
 }
 
 /*Left-shifts binary string `shift` times
@@ -37,11 +37,11 @@ void shift(char* output, char* input, unsigned int shift) {
 */
 void convertBase64ToBinary(char* output, char* input) {
 	unsigned int index = 0, quotient, base;
-	for (; index < BLOCK_SIZE; index++){
+	for (; index <= BLOCK_SIZE; index++){
 		quotient = (unsigned int)input[index];
 		base = CHAR_BIT;
 		while(quotient != 0 || base > 0){
-			output[index * CHAR_BIT + base] = (quotient != quotient / 2 * 2) ? 1 : 0;
+			output[index * CHAR_BIT + base - 1] = (quotient != quotient / 2 * 2) ? '1' : '0';
 			quotient /= 2;
 			base--;
 		}
@@ -53,19 +53,16 @@ void convertBase64ToBinary(char* output, char* input) {
 	input: 	char binary[BLOCK_SIZE * CHAR_BIT];
 */
 void convertBinaryToBase64(char* output, char* input) {
-	unsigned int base = 2, 
+	unsigned int power = 1, 
 				total = 0, 
-				increment = 0,
-				index = BLOCK_SIZE * CHAR_BIT - 1;
-	for (; index >= 0; index--){
-		total += input[index] * base;
-		base *= 2;
-		increment++;
-		if(increment == CHAR_BIT){
-			base = 2;
-			output[index / CHAR_BIT] = BASE64[total]; 
+				index = BLOCK_SIZE * CHAR_BIT;
+	for (; index > 0; index--){
+		total += (input[index - 1] - '0') * power;
+		power *= 2;
+		if(power == 64){
+			output[index / 6 + 1] = BASE64[total];
+			power = 1;
 			total = 0;
-			increment = 0;
 		}
 	}
 }
@@ -76,17 +73,17 @@ void convertBinaryToBase64(char* output, char* input) {
 	-XORs the encrypted binary with the previous binary
 */
 void hash(char* output, char* input) {
-	char currentBinary[BLOCK_SIZE * CHAR_BIT] = {0},
-		previousBinary[BLOCK_SIZE * CHAR_BIT] = {0},
-		shifted[BLOCK_SIZE * CHAR_BIT] = {0},
-		XORed[BLOCK_SIZE * CHAR_BIT] = {0};
+	char currentBinary[BLOCK_SIZE * CHAR_BIT] ,
+		previousBinary[BLOCK_SIZE * CHAR_BIT],
+		shifted[BLOCK_SIZE * CHAR_BIT],
+		XORed[BLOCK_SIZE * CHAR_BIT];
 
 	convertBase64ToBinary(currentBinary, input),
 	convertBase64ToBinary(previousBinary, output);
 
 	unsigned int shiftBy = 1, index = 0;
 	for (; index < BLOCK_SIZE * CHAR_BIT; index++)
-		if (previousBinary[index] == 1)
+		if (previousBinary[index] == '1')
 			shiftBy++;
 
 	shift(shifted, currentBinary, shiftBy);
@@ -96,7 +93,7 @@ void hash(char* output, char* input) {
 }
 
 unsigned int random(){
-	return 1; /*TODO: CSPRNG*/
+	return 1; /*TODO: CSPRNG https://github.com/jedisct1/libsodium/blob/master/src/libsodium/randombytes/sysrandom/randombytes_sysrandom.c */
 }
 
 /*Creates a random salt using the new random function*/
@@ -107,15 +104,30 @@ void createSalt(char* output) {
 
 /*Creates the final hash by compressing the output of each stage*/
 void hashPassword(char* output, char* input) {
+	unsigned int iteration = 0, 
+		index, 
+		offset,
+		weave;
 	createSalt(output);
 	char hashed[BLOCK_SIZE] = H0;
-	unsigned int iteration = 0, index;
 	for (; iteration < COST * 1000; iteration++){
-		index = 0;
-		while(input[index] != '\0'){
-			char block[BLOCK_SIZE] = {0};
+		char block[BLOCK_SIZE] = {'0'};
+		for(index = 0, offset = 0, weave = 0; input[index] != '\0' || offset < BLOCK_SIZE || weave < BLOCK_SIZE; index++, offset++, weave++){
 			
-			hash(hashed, block);
+			if (weave < BLOCK_SIZE){
+				block[offset] = output[weave];
+				offset++;
+			}
+			if (input[index] != '\0'){
+				block[offset] = input[index];
+				hash(hashed, block);
+			}else {
+				block[offset] = '1';
+				hash(hashed, block);
+				break;
+			}
+			if (offset = BLOCK_SIZE)
+				offset = 0;
 		}
 	}
 	for(index = 0; index < BLOCK_SIZE; index++)
@@ -123,18 +135,15 @@ void hashPassword(char* output, char* input) {
 }
 
 int testBaseConversions(){
-    char input[BLOCK_SIZE] = "jonathanmarsh123jonathanmarsh123";
-    char binary[BLOCK_SIZE * CHAR_BIT + 1];
-    convertBase64ToBinary(binary, input);
-	binary[BLOCK_SIZE * CHAR_BIT] = '\0';
+	char binary[BLOCK_SIZE * CHAR_BIT + 1];
+    convertBase64ToBinary(binary, "jonathanmarsh123jonathanmarsh123");
     printf("Binary: %s\n", binary);
     
-    char base64[BLOCK_SIZE + 1];
+	char base64[(BLOCK_SIZE * CHAR_BIT / 6) + 1];
     convertBinaryToBase64(base64, binary);
-	base64[BLOCK_SIZE] = '\0';
     printf("Base64: %s\n", base64);
 
-	return base64 == input;
+	return 0; //TODO
 }
 
 
@@ -142,5 +151,8 @@ int main(int argc, char* argv[]){
 	printf("Number of arguments: %d\n",argc);
 	printf("Conversion test: %d\n",testBaseConversions());
 	
+	char output[BLOCK_SIZE * 2 + 1];
+	hashPassword(output, "thisismypassword");
+	printf("Output: %s\n",output);
 	return 0;
 }

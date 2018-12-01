@@ -4,7 +4,7 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "gcc -o hash jonhash.c",
+            "command": "gcc -o hash main.c test.c jonhash.c",
             "group": {
                 "kind": "build",
                 "isDefault": true

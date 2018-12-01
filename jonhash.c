@@ -4,39 +4,31 @@
 #define COST 10                                                                   //The number of loops, multiplied by 1000
 #define BASE64 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-" //Characters used to represent numbers in base 64
 #define BLOCK_SIZE 32                                                             //The size of the salt and hash; result is always double this
-#define H0 "jonathanmarsh'shashingalgorithm"                                      //The initial hash used for the first XOR (BLOCK_SIZE - 1 characters)
+#define H0 "JonathanMarsh-Hashing-Algorithm"                                      //The initial hash used for the first XOR (BLOCK_SIZE - 1 of BASE64 characters)
 
 #include <stdio.h> //TODO: remove
 
-/*Compares 2 strings of binary and XORs them.
-    output:	char XORed[BLOCK_SIZE * CHAR_BIT + 1];
-    input1:	char currentBinary[BLOCK_SIZE * CHAR_BIT + 1];
-    input2:	char shiftedBinary[BLOCK_SIZE * CHAR_BIT + 1];
-*/
-void XOR(char *output, char *input1, char *input2)
+void XOR(char *XORedString, char *string1, char *string2)
 {
-  for (unsigned int index = 0; index < BLOCK_SIZE * CHAR_BIT; index++)
+  unsigned int index = 0;
+  for (; string1[index] != '\0'; index++)
   {
-    output[index] = (input1[index] != input2[index]) ? '1' : '0';
+    XORedString[index] = (string1[index] != string2[index]) ? '1' : '0';
   }
 }
 
-/*Left-shifts binary string `shift` times
-    output:	char shifted[BLOCK_SIZE * CHAR_BIT + 1];
-    input:	char currentBinary[BLOCK_SIZE * CHAR_BIT + 1];
-    shift:	unsigned int shiftBy;
-*/
-void shift(char *output, char *input, unsigned int shiftBy)
+void shift(char *shiftedString, char *input, int amountToShiftBy)
 {
-  for (unsigned int index = 0; index < BLOCK_SIZE * CHAR_BIT; index++)
+  unsigned int index = 0;
+  for (; input[index] != '\0'; index++)
   {
-    if (index < shift)
+    if (index < amountToShiftBy)
     {
-      output[BLOCK_SIZE * CHAR_BIT - shiftBy + index] = input[index];
+      shiftedString[BLOCK_SIZE * CHAR_BIT - amountToShiftBy + index] = input[index];
     }
     else
     {
-      output[index - shiftBy] = input[index];
+      shiftedString[index - amountToShiftBy] = input[index];
     }
   }
 }
@@ -95,13 +87,17 @@ void hash(char *output, char *input)
       shifted[BLOCK_SIZE * CHAR_BIT],
       XORed[BLOCK_SIZE * CHAR_BIT];
 
-  convertBase64ToBinary(currentBinary, input),
+  convertBase64ToBinary(currentBinary, input);
       convertBase64ToBinary(previousBinary, output);
 
   unsigned int shiftBy = 1, index = 0;
   for (; index < BLOCK_SIZE * CHAR_BIT; index++)
+  {
     if (previousBinary[index] == '1')
+    {
       shiftBy++;
+    }
+  }
 
   shift(shifted, currentBinary, shiftBy);
 
@@ -162,10 +158,13 @@ void hashPassword(char *output, char *input)
 
 void testBaseConversions()
 {
-  char base64Input[32]=H0;
+  printf("Conversion tests");
+  char base64Input[BLOCK_SIZE]="JonathanMarsh-Hashing-Algorithm";
   char binary[BLOCK_SIZE * CHAR_BIT + 1];
   convertBase64ToBinary(binary, base64Input);
-  printf("Binary: %s\n", binary);
+  printf(" -Generated binary: %s\n", binary);
+
+  //TODO: printf("Conversion test failed: binary did not match expected\n");
 
   char base64Output[BLOCK_SIZE + 1];
   convertBinaryToBase64(base64Output, binary);
@@ -176,14 +175,21 @@ void testBaseConversions()
     if (base64Input[index] == base64Output[index])
     {
       printf("Conversion test failed: base 64 output does not match input\n");
+      return;
     }
   }
-  printf("Conversion test passed: base 64 output does not match input\n");
+  printf("Conversion test passed\n");
 }
 
 int main(int argc, char *argv[])
 {
   printf("Number of arguments: %d\n", argc);
+  for (unsigned int index = 0; index < argc; index++)
+  {
+    printf(" -Argument %02d: %s\n", argc, argv[index]);
+  }
+  printf("\n");
+
   testBaseConversions();
 
   char output[BLOCK_SIZE * 2 + 1];

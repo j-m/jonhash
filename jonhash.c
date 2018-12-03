@@ -48,20 +48,20 @@ unsigned int random()
 
 void createSalt(char *output)
 {
-  for (unsigned int index = 0; index < BLOCK_SIZE; index++)
+  unsigned int index = 0;
+  for (; index < BLOCK_SIZE; index++)
   {
     output[index] = BASE64[random()];
-}
+  }
 }
 
 void hashPassword(char *output, char *input)
 {
   unsigned int iteration = 0, index = 0, offset = 0,  weave = 0;
-  createSalt(output);
   char hashed[BLOCK_SIZE] = H0;
   for (; iteration < COST * 1000; iteration++)
   {
-    char block[BLOCK_SIZE] = {'0'};
+    char block[BLOCK_SIZE];
     for (index = 0, offset = 0, weave = 0; input[index] != '\0' || offset < BLOCK_SIZE || weave < BLOCK_SIZE; index++, offset++, weave++)
     {
       if (weave < BLOCK_SIZE)
@@ -90,4 +90,10 @@ void hashPassword(char *output, char *input)
   {
     output[BLOCK_SIZE + index] = hashed[index];
   }
+}
+
+void hashPassword(char *hash, char *password)
+{
+  createSalt(output);
+  hashPassword(hash, password, salt);
 }

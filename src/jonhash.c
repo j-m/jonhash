@@ -1,11 +1,30 @@
 #include "jonhash.h"
 
+unsigned short lfsr = 0xACE1u;
+unsigned bit;
+
+unsigned random()
+{
+  bit  = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1;
+  return lfsr =  (lfsr >> 1) | (bit << 15);
+}
+// https://stackoverflow.com/a/7603688/4907552
+
+void createSalt(char *output)
+{
+  unsigned int index = 0;
+  for (; index < BLOCK_SIZE; index++)
+  {
+    output[index] = BASE64[random() % 64];
+  }
+}
+
 void shift(char *shiftedString, char *input, int numberOfBitsToShiftBy)
 {
   unsigned int numberOfCharactersToShiftBy = numberOfBitsToShiftBy / CHAR_BIT;
   numberOfBitsToShiftBy = numberOfBitsToShiftBy - numberOfCharactersToShiftBy * CHAR_BIT;
   unsigned int index = 0;
-  for (; input[index] != '\0'; index++)
+  for (; index < BLOCK_SIZE; index++)
   {
     char cn = index + numberOfCharactersToShiftBy;
     if (cn > BLOCK_SIZE)
@@ -24,12 +43,35 @@ void shift(char *shiftedString, char *input, int numberOfBitsToShiftBy)
   }
 }
 
-int countOnesInBinaryOfCharArray()
+int bitCount(unsigned int u)
 {
-  return 1 % BLOCK_SIZE; //TODO: Count the number of 1s in the binary representation of the char array, modulused by BLOCK_SIZE
+  unsigned int uCount;
+  uCount = u - ((u >> 1) & 033333333333) - ((u >> 2) & 011111111111);
+  return ((uCount + (uCount >> 3)) & 030707070707) % 63;
+}
+// https://stackoverflow.com/a/8871435/4907552
+
+int countOnesInBinaryOfCharArray(char *input)
+{
+  unsigned int total = 0;
+  unsigned int index = 0;
+  for (; input[index] != '\0'; index++)
+  {
+    total += bitCount(input[index]);
+  }
+  return total;
 }
 
-void hash(char *output, char *input)
+void XOR(char *output, char *input1, char *input2)
+{
+  unsigned int index;
+  for (index = 0; index < BLOCK_SIZE; index++)
+  {
+    output[index] = input1[index] ^ input2[index];
+  }
+}
+
+void hashBlock(char *output, char *input)
 {
   char shifted[BLOCK_SIZE];
   unsigned int shiftBy = countOnesInBinaryOfCharArray(input);
@@ -41,21 +83,7 @@ void hash(char *output, char *input)
   XOR(XORed, input, output);
 }
 
-unsigned int random()
-{
-  return 1; /*TODO: Return 0 - 63 with a CSPRNG https://github.com/jedisct1/libsodium/blob/master/src/libsodium/randombytes/sysrandom/randombytes_sysrandom.c */
-}
-
-void createSalt(char *output)
-{
-  unsigned int index = 0;
-  for (; index < BLOCK_SIZE; index++)
-  {
-    output[index] = BASE64[random()];
-  }
-}
-
-void hashPassword(char *output, char *input)
+void hashWithSalt(char *output, char *input, char *salt)
 {
   unsigned int iteration = 0, index = 0, offset = 0,  weave = 0;
   char hashed[BLOCK_SIZE] = H0;
@@ -72,15 +100,15 @@ void hashPassword(char *output, char *input)
       if (input[index] != '\0')
       {
         block[offset] = input[index];
-        hash(hashed, block);
+        hashBlock(hashed, block);
       }
       else
       {
         block[offset] = '1';
-        hash(hashed, block);
+        hashBlock(hashed, block);
         break;
       }
-      if (offset = BLOCK_SIZE)
+      if (offset == BLOCK_SIZE)
       {
         offset = 0;
       }
@@ -92,8 +120,9 @@ void hashPassword(char *output, char *input)
   }
 }
 
-void hashPassword(char *hash, char *password)
+void hash(char *output, char *input)
 {
-  createSalt(output);
-  hashPassword(hash, password, salt);
+  char salt[BLOCK_SIZE];
+  createSalt(salt);
+  hashWithSalt(output, input, salt);
 }

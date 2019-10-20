@@ -1,6 +1,6 @@
 #ifndef JONHASHTEST
 #define JONHASHTEST
 
-int testHash();
+int test();
 
 #endif

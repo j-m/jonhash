@@ -1,0 +1,374 @@
+<style>
+  #JonHashDocs {
+    font-size: 1rem;
+    color: black;
+    font-family: monospace, monospace;
+    font-size: 1rem;
+    margin: 1rem;
+    width: min-content;
+  }
+
+  #JonHashDocs h1,
+  #JonHashDocs h2,
+  #JonHashDocs h3,
+  #JonHashDocs p,
+  #JonHashDocs span {
+    margin: 0;
+    font-weight: normal;
+  }
+
+  #JonHashDocs h1 {
+    font-size: 1.1rem;
+    white-space: nowrap;
+    margin-bottom: 0.4rem;
+  }
+
+  #JonHashDocs h2 {
+    font-size: 0.9rem;
+  }
+
+  #JonHashDocs h3 {
+    font-size: 0.8rem;
+  }
+
+  #JonHashDocs h1:not(:first-child)::before {
+    border-top: 1px solid rgb(224, 224, 224);
+    box-sizing: border-box;
+    content: " ";
+    display: block;
+    height: 1px;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    width: 100%;
+  }
+
+  #JonHashDocs span {
+    font-weight: bold;
+  }
+
+  #JonHashDocs .definition {
+    white-space: pre;
+    line-height: 1rem;
+    font-weight: normal;
+    font-weight: bold;
+  }
+</style>
+<div id="JonHashDocs">
+  <h1>Definitions</h1>
+  <p>This demonstration uses the following definitions:</p>
+  <p class="definition"><b>CHAR_BIT</b>     8</p>
+  <p class="definition"><b>COST</b>         10</p>
+  <p class="definition"><b>BASE64</b>      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-"</p>
+  <p class="definition"><b>BLOCK_SIZE</b>   4</p>
+  <p class="definition"><b>H0</b>          "JONM"</p>
+  <h3>(The password is "PASSWORD")</h3>
+
+  <h1>Salt</h1>
+  <h2>
+    A string of <b>BLOCK_SIZE</b> characters randomly selected from
+    <b>BASE64</b> using a <a href="https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator">CSPRNG</a>
+  </h2>
+  <style>
+    #salt {
+      display: inline-block;
+      position: relative;
+    }
+
+    #salt span {
+      display: inline-block;
+      font-size: 2rem;
+      height: 2rem;
+      line-height: 2rem;
+      width: 1ch;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #salt span::before {
+      content: "SHNFqfwEOgPbG71KAC+sD9nYv4VhrRLTxmtjaQcM0uU6Jody3BZ5iWk-8l2zpeXIS";
+      word-break: break-all;
+      display: inline-block;
+      position: absolute;
+      animation: saltRandom 5s linear infinite;
+    }
+
+    #salt span:nth-child(2):before {
+      content: "AGF-cyTuEodrgUW523J9eR1LvB+PzmYlbHQhZijCpIw6NSftsDk074aOnX8xqKVMA";
+      animation-delay: 1s;
+    }
+    #salt span:nth-child(3):before {
+      content: "L40kPdDOj2SoyZ9VwcU8T65MuzFHnJxhl3+vCtQ-srgERAaBXqmb7fINp1YGeiWKL";
+      animation-delay: 2s;
+    }
+    #salt span:nth-child(4):before {
+      content: "TglDib7OSKkPuWc5JtnGVzaxqMdrsUE-1o0jvZFINQ8pRALY4+y3heXf6HCm9wB2T";
+      animation-delay: 3s;
+    }
+
+    @keyframes saltRandom {
+      0%,
+      20% {
+        top: 0;
+      }
+      to {
+        top: -6300%;
+      }
+    }
+  </style>
+  <div id="salt"><span></span><span></span><span></span><span></span></div>
+  <h3>
+    For simplicity, this demonstration uses "SALT"
+  </h3>
+
+  <h1>Weave</h1>
+  <style>
+    #weave {
+      position: relative;
+      width: 20rem;
+      overflow: hidden;
+      white-space: nowrap;
+      height: 2rem;
+    }
+
+    #weave p {
+      position: absolute;
+      left: 100%;
+
+      letter-spacing: 1ch;
+      white-space: pre;
+    }
+
+    #weave p:nth-child(1) {
+      top: 0;
+      animation: weaveSalt 4s linear infinite;
+    }
+
+    #weave p:nth-child(2) {
+      top: 1rem;
+      animation: weavePassword 4s linear infinite;
+    }
+
+    @keyframes weaveSalt {
+      35% {
+        top: 0;
+      }
+      60%,
+      100% {
+        left: 0;
+        top: 0.5rem;
+      }
+    }
+
+    @keyframes weavePassword {
+      40% {
+        top: 1rem;
+      }
+      60%,
+      100% {
+        left: 0;
+        top: 0.5rem;
+      }
+    }
+
+    #weave p:nth-child(2) span {
+      animation: weaveCompress 4s linear infinite;
+      margin-left: 0;
+      letter-spacing: 1ch;
+    }
+
+    @keyframes weaveCompress {
+      70% {
+        margin-left: 0;
+        letter-spacing: 1ch;
+      }
+      80%,
+      100% {
+        letter-spacing: 0ch;
+        margin-left: -1ch;
+      }
+    }
+  </style>
+  <h2>
+    Generates the string to hash by alternating between <b>password</b> and
+    <b>salt</b>
+  </h2>
+  <div id="weave">
+    <p>S A L T </p>
+    <p> P A S S<span> W O R D</span></p>
+  </div>
+
+  <h1>Block</h1>
+  <style>
+    #block {
+      width: 36ch;
+      height: 5rem;
+    }
+
+    #block::before {
+      content: " ";
+      animation: binary 5s linear infinite;
+    }
+
+    @keyframes binary {
+      0%,
+      10% {
+        content: "S P A A L S T S E W D O R D";
+        word-spacing: -1ch;
+      }
+
+      50% {
+        color: black;
+        word-spacing: 7ch;
+      }
+
+      70% {
+        color: white;
+        content: "S P A A L S T S E W D O R D";
+        word-spacing: 7ch;
+      }
+
+      71% {
+        color: white;
+        content: "01010011 01010000 01000001 01000001  01001100 01010011 01010100 01010011  01000101 01010111 01000100 01001111  01010010 01000100";
+        word-spacing: inherit;
+      }
+
+      80% {
+        content: "01010011 01010000 01000001 01000001  01001100 01010011 01010100 01010011  01000101 01010111 01000100 01001111  01010010 01000100";
+        color: black;
+        word-spacing: inherit;
+      }
+
+      90%,
+      100% {
+        content: "01010011 01010000 01000001 01000001  01001100 01010011 01010100 01010011  01000101 01010111 01000100 01001111  01010010 01000100";
+        color: black;
+        word-spacing: -1ch;
+      }
+    }
+  </style>
+  <h2>Divides the <b>weave</b> into <b>BLOCK_SIZE</b> chunks</h2>
+  <p id="block"></p>
+  <h3>(This is just a visual aid; there are no base conversions)</h3>
+  <h2>Each block uses the previous block's hash, starting with <b>H0</b></h2>
+
+  <h1>Shift</h1>
+  <style>
+    #shiftcharacters {
+      position: relative;
+      height: 2rem;
+    }
+    #shiftcharacters span {
+      position: absolute;
+      top: 1rem;
+      left: 0;
+      animation: shift1 5s linear infinite;
+    }
+    @keyframes shift1 {
+      0% {
+        top: 1rem;
+      }
+      10% {
+        top: 0;
+        left: 0;
+      }
+      50% {
+        top: 0;
+        left: 18ch;
+      }
+      60%,
+      100% {
+        top: 1rem;
+        left: 18ch;
+      }
+    }
+    #shiftcharacters span:nth-child(2) {
+      left: 9ch;
+      animation: shift2 5s linear infinite;
+    }
+    @keyframes shift2 {
+      0% {
+        top: 1rem;
+      }
+      10% {
+        top: 0;
+        left: 9ch;
+      }
+      50% {
+        top: 0;
+        left: 27ch;
+      }
+      60%,
+      100% {
+        top: 1rem;
+        left: 27ch;
+      }
+    }
+    #shiftcharacters span:nth-child(3) {
+      left: 18ch;
+      animation: shift3 5s linear infinite;
+    }
+    @keyframes shift3 {
+      0%,
+      10% {
+        top: 1rem;
+        left: 18ch;
+      }
+      50%,
+      100% {
+        top: 1rem;
+        left: 0;
+      }
+    }
+    #shiftcharacters span:nth-child(4) {
+      left: 27ch;
+      animation: shift4 5s linear infinite;
+    }
+    @keyframes shift4 {
+      0%,
+      10% {
+        top: 1rem;
+        left: 27ch;
+      }
+      50%,
+      100% {
+        top: 1rem;
+        left: 9ch;
+      }
+    }
+  </style>
+  <h2>
+    <b>shift</b>: the number of 1s in the concatenated binary value of the
+    <b>block</b>
+  </h2>
+  <h2>
+    <b>charshift = shift/CHAR_BIT</b>: the number of characters to offset by
+  </h2>
+  <h2>
+    <b>bitshift = shift - charshift*CHAR_BIT</b>: the number of times to
+    left-shift by
+  </h2>
+  <p id="shiftcharacters">
+    <span>01010011</span> <span>01010000</span> <span>01000001</span>
+    <span>01000001</span>
+  </p>
+
+  <style>
+    #XOR p {
+      white-space: pre;
+    }
+  </style>
+  <h1>XOR</h1>
+  <h2>Used as a compression/sponging function</h2>
+  <h2>
+    The previous hash (H0 in the first iteration) is XORed with the shifted
+    block
+  </h2>
+  <div id="XOR">
+    <p> 010101010101011010101</p>
+    <p><u>^011101010101110101011</u></p>
+    <p> 001000000000101111110</p>
+  </div>
+
+</div>
+
